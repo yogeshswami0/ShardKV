@@ -1,0 +1,17 @@
+*.idx
+*.log
+*.sst
+*.d
+*.o
+*.a
+*.cmake
+compile_commands.json
+.DS_Store
+*.pyc
+__pycache__
+shard_test_data_*
+shard_test_wal_*
+.vscode/
+.env
+build*/
+run/

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShardKV Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #21262d;
+            --border: #30363d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1f35, #0d1117);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card h2 .icon {
+            font-size: 1.4rem;
+        }
+
+        /* Cluster Status */
+        .cluster-nodes {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .node {
+            flex: 1;
+            min-width: 120px;
+            padding: 16px;
+            background: var(--bg-card-hover);
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .node.leader {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(63, 185, 80, 0.2);
+        }
+
+        .node.follower {
+            border-color: var(--accent-blue);
+        }
+
+        .node.offline {
+            border-color: var(--accent-red);
+            opacity: 0.6;
+        }
+
+        .node .name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .node .role {
+            font-size: 0.85rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .node.leader .role {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--accent-green);
+        }
+
+        .node.follower .role {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .node.offline .role {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* KV Operations */
+        .kv-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px 14px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--accent-orange);
+            color: var(--bg-dark);
+        }
+
+        .btn-purple {
+            background: var(--accent-purple);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-card-hover);
+        }
+
+        /* Test Scenarios */
+        .scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .scenario-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: var(--bg-card-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scenario-btn:hover {
+            background: #2d333b;
+            border-color: var(--accent-blue);
+        }
+
+        .scenario-btn .icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .scenario-btn .label {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .scenario-btn .desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* Activity Log */
+        .activity-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry .time {
+            color: var(--text-secondary);
+            min-width: 70px;
+            font-family: monospace;
+        }
+
+        .log-entry .action {
+            font-weight: 600;
+            min-width: 80px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-align: center;
+            margin-right: 12px;
+        }
+
+        .log-entry .action.put {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--accent-green);
+        }
+
+        .log-entry .action.get {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .log-entry .action.delete {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--accent-red);
+        }
+
+        .log-entry .action.test {
+            background: rgba(163, 113, 247, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .log-entry .details {
+            flex: 1;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .log-entry.error {
+            background: rgba(248, 81, 73, 0.1);
+        }
+
+        /* Results Panel */
+        .results-panel {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .results-panel.hidden {
+            display: none;
+        }
+
+        .results-panel .success {
+            color: var(--accent-green);
+        }
+
+        .results-panel .error {
+            color: var(--accent-red);
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .stat .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading {
+            animation: pulse 1s infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>⚡ ShardKV Dashboard</h1>
+            <p>Distributed Key-Value Store Visualization</p>
+        </header>
+
+        <!-- Cluster Status -->
+        <div class="grid">
+            <div class="card">
+                <h2><span class="icon">🖥️</span> Cluster Status</h2>
+                <div class="cluster-nodes" id="cluster-nodes">
+                    <div class="node loading" id="node1">
+                        <div class="name">Node 1</div>
+                        <div class="status">Checking...</div>
+                        <span class="role">Unknown</span>
+                    </div>
+                    <div class="node loading" id="node2">
+                        <div class="name">Node 2</div>
+                        <div class="status">Checking...</div>
+                        <span class="role">Unknown</span>
+                    </div>
+                    <div class="node loading" id="node3">
+                        <div class="name">Node 3</div>
+                        <div class="status">Checking...</div>
+                        <span class="role">Unknown</span>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="value" id="stat-ops">0</div>
+                        <div class="label">Operations</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value" id="stat-latency">-</div>
+                        <div class="label">Avg Latency</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value" id="stat-leader">-</div>
+                        <div class="label">Current Leader</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">🔑</span> Key-Value Operations</h2>
+                <div class="kv-form">
+                    <div class="input-group">
+                        <input type="text" id="kv-key" placeholder="Key (e.g., user:123)">
+                        <input type="text" id="kv-value" placeholder="Value">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-success" onclick="putKey()">PUT</button>
+                        <button class="btn-primary" onclick="getKey()">GET</button>
+                        <button class="btn-danger" onclick="deleteKey()">DELETE</button>
+                    </div>
+                </div>
+                <div class="results-panel hidden" id="kv-result"></div>
+            </div>
+        </div>
+
+        <!-- Test Scenarios -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h2><span class="icon">🧪</span> Test Scenarios</h2>
+            <div class="scenarios">
+                <div class="scenario-btn" onclick="runBasicCrud()">
+                    <span class="icon">📝</span>
+                    <span class="label">Basic CRUD</span>
+                    <span class="desc">PUT → GET → DELETE</span>
+                </div>
+                <div class="scenario-btn" onclick="runBatchWrite()">
+                    <span class="icon">⚡</span>
+                    <span class="label">Batch Write</span>
+                    <span class="desc">100 keys throughput</span>
+                </div>
+                <div class="scenario-btn" onclick="runConsistencyTest()">
+                    <span class="icon">🔄</span>
+                    <span class="label">Consistency</span>
+                    <span class="desc">Read-your-writes</span>
+                </div>
+                <div class="scenario-btn" onclick="runRandomWorkload()">
+                    <span class="icon">🎲</span>
+                    <span class="label">Random Load</span>
+                    <span class="desc">Mixed operations</span>
+                </div>
+                <div class="scenario-btn" style="border-color: var(--accent-orange);" onclick="runLeaderFailover()">
+                    <span class="icon">💥</span>
+                    <span class="label">Leader Failover</span>
+                    <span class="desc">Election demo</span>
+                </div>
+            </div>
+            <div class="results-panel hidden" id="test-result"></div>
+        </div>
+
+        <!-- Raft Election Log -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h2>
+                <span class="icon">🗳️</span> Raft Election Log
+                <button class="btn-outline" style="margin-left: auto; padding: 6px 12px; font-size: 12px;"
+                    onclick="refreshRaftLogs()">Refresh</button>
+            </h2>
+            <div class="activity-log" id="raft-log" style="max-height: 250px;">
+                <div class="log-entry" style="justify-content: center; color: var(--text-secondary);">
+                    Click "Leader Failover" to see election events, or "Refresh" to load existing logs.
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <h2>
+                <span class="icon">📋</span> Activity Log
+                <button class="btn-outline" style="margin-left: auto; padding: 6px 12px; font-size: 12px;"
+                    onclick="clearActivity()">Clear</button>
+            </h2>
+            <div class="activity-log" id="activity-log">
+                <div class="log-entry" style="justify-content: center; color: var(--text-secondary);">
+                    No activity yet. Run a test or perform an operation.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';  // Same origin
+        let totalOps = 0;
+        let latencies = [];
+
+        // ============ Cluster Status ============
+        async function updateClusterStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/cluster/status`);
+                const data = await response.json();
+
+                for (const [nodeName, info] of Object.entries(data)) {
+                    const nodeEl = document.getElementById(nodeName);
+                    if (!nodeEl) continue;
+
+                    nodeEl.classList.remove('loading', 'leader', 'follower', 'offline');
+
+                    if (info.status === 'offline') {
+                        nodeEl.classList.add('offline');
+                        nodeEl.querySelector('.role').textContent = 'Offline';
+                    } else {
+                        const role = info.role || 'Healthy';
+                        nodeEl.classList.add(role.toLowerCase());
+                        nodeEl.querySelector('.role').textContent = role.charAt(0).toUpperCase() + role.slice(1);
+
+                        if (role === 'leader') {
+                            document.getElementById('stat-leader').textContent = `Node ${info.id}`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch cluster status:', e);
+            }
+        }
+
+        // ============ Activity Log ============
+        async function updateActivityLog() {
+            try {
+                const response = await fetch(`${API_BASE}/api/activity`);
+                const activities = await response.json();
+
+                const logEl = document.getElementById('activity-log');
+
+                if (activities.length === 0) {
+                    logEl.innerHTML = `
+                        <div class="log-entry" style="justify-content: center; color: var(--text-secondary);">
+                            No activity yet. Run a test or perform an operation.
+                        </div>
+                    `;
+                    return;
+                }
+
+                logEl.innerHTML = activities.map(entry => `
+                    <div class="log-entry ${entry.status === 'error' ? 'error' : ''}">
+                        <span class="time">${entry.timestamp}</span>
+                        <span class="action ${entry.action.toLowerCase()}">${entry.action}</span>
+                        <span class="details">${entry.details}</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to fetch activity:', e);
+            }
+        }
+
+        async function clearActivity() {
+            await fetch(`${API_BASE}/api/clear-activity`, { method: 'POST' });
+            updateActivityLog();
+        }
+
+        // ============ KV Operations ============
+        function showResult(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('hidden');
+            el.innerHTML = `<span class="${isError ? 'error' : 'success'}">${message}</span>`;
+        }
+
+        function updateStats(latency) {
+            totalOps++;
+            latencies.push(latency);
+            if (latencies.length > 100) latencies.shift();
+
+            document.getElementById('stat-ops').textContent = totalOps;
+            const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+            document.getElementById('stat-latency').textContent = `${avg.toFixed(1)}ms`;
+        }
+
+        async function putKey() {
+            const key = document.getElementById('kv-key').value;
+            const value = document.getElementById('kv-value').value;
+
+            if (!key) {
+                showResult('kv-result', 'Error: Key is required', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/kv/put`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showResult('kv-result', `✓ PUT successful (${data.latency_ms}ms)`);
+                    updateStats(data.latency_ms);
+                } else {
+                    showResult('kv-result', `✗ PUT failed: ${data.error}`, true);
+                }
+                updateActivityLog();
+            } catch (e) {
+                showResult('kv-result', `✗ Error: ${e.message}`, true);
+            }
+        }
+
+        async function getKey() {
+            const key = document.getElementById('kv-key').value;
+
+            if (!key) {
+                showResult('kv-result', 'Error: Key is required', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/kv/get`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await response.json();
+
+                if (data.found) {
+                    showResult('kv-result', `✓ Found: "${data.value}" (${data.latency_ms}ms)`);
+                    document.getElementById('kv-value').value = data.value;
+                    updateStats(data.latency_ms);
+                } else {
+                    showResult('kv-result', `Key not found (${data.latency_ms}ms)`, false);
+                }
+                updateActivityLog();
+            } catch (e) {
+                showResult('kv-result', `✗ Error: ${e.message}`, true);
+            }
+        }
+
+        async function deleteKey() {
+            const key = document.getElementById('kv-key').value;
+
+            if (!key) {
+                showResult('kv-result', 'Error: Key is required', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/kv/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showResult('kv-result', `✓ DELETE successful (${data.latency_ms}ms)`);
+                    updateStats(data.latency_ms);
+                } else {
+                    showResult('kv-result', `✗ DELETE failed: ${data.error}`, true);
+                }
+                updateActivityLog();
+            } catch (e) {
+                showResult('kv-result', `✗ Error: ${e.message}`, true);
+            }
+        }
+
+        // ============ Test Scenarios ============
+        async function runBasicCrud() {
+            const resultEl = document.getElementById('test-result');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = '<span class="loading">Running Basic CRUD test...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/test/basic-crud`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    let html = '<span class="success">✓ Basic CRUD Test Passed</span>\n\n';
+                    data.results.forEach(r => {
+                        html += `${r.op}: ${r.key || ''} ${r.value ? '→ ' + r.value : ''} ${r.latency_ms ? `(${r.latency_ms}ms)` : ''}\n`;
+                    });
+                    resultEl.innerHTML = `<pre>${html}</pre>`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Test failed: ${data.error}</span>`;
+                }
+                updateActivityLog();
+            } catch (e) {
+                resultEl.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+            }
+        }
+
+        async function runBatchWrite() {
+            const resultEl = document.getElementById('test-result');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = '<span class="loading">Running Batch Write test (100 keys)...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/test/batch-write`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count: 100 })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    resultEl.innerHTML = `<pre><span class="success">✓ Batch Write Completed</span>
+
+Total:         ${data.total} operations
+Successful:    ${data.successful}
+Failed:        ${data.failed}
+Total Time:    ${data.total_time_ms}ms
+Throughput:    <span class="success">${data.ops_per_second} ops/sec</span>
+Avg Latency:   ${data.avg_latency_ms}ms</pre>`;
+
+                    latencies = data.latencies;
+                    totalOps += data.successful;
+                    document.getElementById('stat-ops').textContent = totalOps;
+                    document.getElementById('stat-latency').textContent = `${data.avg_latency_ms}ms`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Test failed: ${data.error}</span>`;
+                }
+                updateActivityLog();
+            } catch (e) {
+                resultEl.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+            }
+        }
+
+        async function runConsistencyTest() {
+            const resultEl = document.getElementById('test-result');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = '<span class="loading">Running Consistency test...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/test/consistency`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    let html = '<span class="success">✓ Consistency Test Passed</span>\n\n';
+                    data.results.forEach(r => {
+                        const status = r.consistent === false ? '❌' : (r.consistent === true ? '✓' : '→');
+                        html += `Step ${r.step}: ${r.action} ${r.key} ${r.value ? `= "${r.value}"` : ''} ${status}\n`;
+                    });
+                    resultEl.innerHTML = `<pre>${html}</pre>`;
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Test failed: ${data.error}</span>`;
+                }
+                updateActivityLog();
+            } catch (e) {
+                resultEl.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+            }
+        }
+
+        async function runRandomWorkload() {
+            const resultEl = document.getElementById('test-result');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = '<span class="loading">Running random workload...</span>';
+
+            const operations = ['put', 'get', 'put', 'put', 'get'];  // 60% writes
+            const results = { put: 0, get: 0, errors: 0 };
+            const start = Date.now();
+
+            for (let i = 0; i < 50; i++) {
+                const op = operations[Math.floor(Math.random() * operations.length)];
+                const key = `random:${Math.floor(Math.random() * 20)}`;
+                const value = `value_${Date.now()}`;
+
+                try {
+                    if (op === 'put') {
+                        await fetch(`${API_BASE}/api/kv/put`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key, value })
+                        });
+                        results.put++;
+                    } else {
+                        await fetch(`${API_BASE}/api/kv/get`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key })
+                        });
+                        results.get++;
+                    }
+                } catch (e) {
+                    results.errors++;
+                }
+            }
+
+            const elapsed = Date.now() - start;
+            const total = results.put + results.get;
+
+            resultEl.innerHTML = `<pre><span class="success">✓ Random Workload Completed</span>
+
+PUT operations: ${results.put}
+GET operations: ${results.get}
+Errors:         ${results.errors}
+Total Time:     ${elapsed}ms
+Throughput:     <span class="success">${Math.round(total / (elapsed / 1000))} ops/sec</span></pre>`;
+
+            totalOps += total;
+            document.getElementById('stat-ops').textContent = totalOps;
+            updateActivityLog();
+        }
+
+        // ============ Leader Failover & Raft Logs ============
+        async function runLeaderFailover() {
+            const resultEl = document.getElementById('test-result');
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = '<span class="loading">🗳️ Running Leader Failover Test...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/test/leader-failover`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    let html = `<pre><span class="success">✓ Leader Failover Test Complete</span>
+
+<strong>Old Leader:</strong> ${data.old_leader}
+<strong>New Leader:</strong> ${data.new_leader || 'Election in progress...'}
+
+<strong>Steps:</strong>\n`;
+
+                    data.results.forEach(r => {
+                        if (r.action === 'RAFT_LOGS' && r.logs) {
+                            html += `\n<strong>Election Logs:</strong>\n`;
+                            r.logs.forEach(log => {
+                                html += `  ${log}\n`;
+                            });
+                        } else {
+                            html += `${r.step}. ${r.action}: ${r.message}\n`;
+                        }
+                    });
+
+                    resultEl.innerHTML = html + '</pre>';
+
+                    // Refresh cluster status and raft logs
+                    setTimeout(() => {
+                        updateClusterStatus();
+                        refreshRaftLogs();
+                    }, 1000);
+                } else {
+                    resultEl.innerHTML = `<span class="error">✗ Test failed: ${data.error}</span>`;
+                }
+                updateActivityLog();
+            } catch (e) {
+                resultEl.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+            }
+        }
+
+        async function refreshRaftLogs() {
+            const logEl = document.getElementById('raft-log');
+            logEl.innerHTML = '<div class="log-entry loading" style="justify-content: center;">Loading Raft logs...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/raft/logs`);
+                const events = await response.json();
+
+                if (events.length === 0) {
+                    logEl.innerHTML = '<div class="log-entry" style="justify-content: center; color: var(--text-secondary);">No recent Raft events found.</div>';
+                    return;
+                }
+
+                logEl.innerHTML = events.map(event => {
+                    const typeClass = event.type === 'leader' ? 'put' : (event.type === 'vote' ? 'get' : 'test');
+                    const icon = event.type === 'leader' ? '👑' : (event.type === 'vote' ? '🗳️' : '📢');
+                    return `
+                        <div class="log-entry">
+                            <span class="time">${event.node}</span>
+                            <span class="action ${typeClass}">${icon} ${event.type.toUpperCase()}</span>
+                            <span class="details">${event.message}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                logEl.innerHTML = `<div class="log-entry error">Error loading logs: ${e.message}</div>`;
+            }
+        }
+
+        async function stopNode(nodeName) {
+            try {
+                await fetch(`${API_BASE}/api/node/stop/${nodeName}`, { method: 'POST' });
+                updateClusterStatus();
+                updateActivityLog();
+            } catch (e) {
+                console.error('Failed to stop node:', e);
+            }
+        }
+
+        async function startNode(nodeName) {
+            try {
+                await fetch(`${API_BASE}/api/node/start/${nodeName}`, { method: 'POST' });
+                updateClusterStatus();
+                updateActivityLog();
+            } catch (e) {
+                console.error('Failed to start node:', e);
+            }
+        }
+
+        // ============ Initialize ============
+        updateClusterStatus();
+        updateActivityLog();
+
+        // Refresh status every 5 seconds
+        setInterval(updateClusterStatus, 5000);
+        setInterval(updateActivityLog, 3000);
+    </script>
+</body>
+
+</html>

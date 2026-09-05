@@ -1,0 +1,81 @@
+services:
+  node1:
+    build: .
+    container_name: shard-node1
+    environment:
+      - SHARD_NODE_ID=1
+      - SHARD_LISTEN_ADDR=0.0.0.0:7070
+      - SHARD_PEERS=2:node2:7070,3:node3:7070
+      - SHARD_DATA_DIR=/var/shard/data
+      - SHARD_WAL_DIR=/var/shard/wal
+      - SHARD_LOG_LEVEL=INFO
+      - SHARD_MEMTABLE_SIZE_MB=32
+      - SHARD_ELECTION_TIMEOUT_MIN_MS=500
+      - SHARD_ELECTION_TIMEOUT_MAX_MS=1000
+      - SHARD_HEARTBEAT_MS=50
+    volumes:
+      - node1-data:/var/shard/data
+      - node1-wal:/var/shard/wal
+    ports:
+      - "7071:7070"
+    networks:
+      - shard-net
+    restart: unless-stopped
+
+  node2:
+    build: .
+    container_name: shard-node2
+    environment:
+      - SHARD_NODE_ID=2
+      - SHARD_LISTEN_ADDR=0.0.0.0:7070
+      - SHARD_PEERS=1:node1:7070,3:node3:7070
+      - SHARD_DATA_DIR=/var/shard/data
+      - SHARD_WAL_DIR=/var/shard/wal
+      - SHARD_LOG_LEVEL=INFO
+      - SHARD_MEMTABLE_SIZE_MB=32
+    volumes:
+      - node2-data:/var/shard/data
+      - node2-wal:/var/shard/wal
+    ports:
+      - "7072:7070"
+    networks:
+      - shard-net
+    restart: unless-stopped
+    depends_on:
+      - node1
+
+  node3:
+    build: .
+    container_name: shard-node3
+    environment:
+      - SHARD_NODE_ID=3
+      - SHARD_LISTEN_ADDR=0.0.0.0:7070
+      - SHARD_PEERS=1:node1:7070,2:node2:7070
+      - SHARD_DATA_DIR=/var/shard/data
+      - SHARD_WAL_DIR=/var/shard/wal
+      - SHARD_LOG_LEVEL=INFO
+      - SHARD_MEMTABLE_SIZE_MB=32
+    volumes:
+      - node3-data:/var/shard/data
+      - node3-wal:/var/shard/wal
+    ports:
+      - "7073:7070"
+    networks:
+      - shard-net
+    restart: unless-stopped
+    depends_on:
+      - node1
+      - node2
+
+volumes:
+  node1-data:
+  node1-wal:
+  node2-data:
+  node2-wal:
+  node3-data:
+  node3-wal:
+
+
+networks:
+  shard-net:
+    driver: bridge

@@ -21,7 +21,7 @@ app = Flask(__name__, static_folder="static")
 CORS(app)
 
 ROOT = Path(__file__).resolve().parent.parent
-RUN_DIR = ROOT / "run"
+RUN_DIR = Path("/tmp/shard") if os.environ.get("FORCE_LOCAL_NODES") == "1" else ROOT / "run"
 
 NODES = {
     "node1": {"address": "127.0.0.1:7071", "id": 1},
@@ -100,6 +100,20 @@ def node_env(name, info):
 
 
 def pid_on_port(port: int):
+    if os.name != "nt":
+        try:
+            out = subprocess.check_output(["ss", "-lptn"], text=True, stderr=subprocess.DEVNULL)
+            needle = f":{port} "
+            for line in out.splitlines():
+                if needle in line and "pid=" in line:
+                    # extract pid from "pid=1234,"
+                    parts = line.split("pid=")
+                    if len(parts) > 1:
+                        return int(parts[1].split(",")[0])
+        except Exception:
+            pass
+        return None
+
     try:
         out = subprocess.check_output(
             ["netstat", "-ano", "-p", "tcp"],

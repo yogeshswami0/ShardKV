@@ -1,61 +1,80 @@
+# services:
+#   - type: pserv
+#     name: node1
+#     env: docker
+#     plan: free
+#     dockerContext: .
+#     dockerfilePath: ./Dockerfile
+#     envVars:
+#       - key: SHARD_NODE_ID
+#         value: 1
+#       - key: SHARD_LISTEN_ADDR
+#         value: 0.0.0.0:7070
+#       - key: SHARD_PEERS
+#         value: 2:node2:7070,3:node3:7070
+#       - key: SHARD_DATA_DIR
+#         value: /var/shard/data
+#       - key: SHARD_WAL_DIR
+#         value: /var/shard/wal
+
+#   - type: pserv
+#     name: node2
+#     env: docker
+#     dockerContext: .
+#     dockerfilePath: ./Dockerfile
+#     envVars:
+#       - key: SHARD_NODE_ID
+#         value: 2
+#       - key: SHARD_LISTEN_ADDR
+#         value: 0.0.0.0:7070
+#       - key: SHARD_PEERS
+#         value: 1:node1:7070,3:node3:7070
+#       - key: SHARD_DATA_DIR
+#         value: /var/shard/data
+#       - key: SHARD_WAL_DIR
+#         value: /var/shard/wal
+
+#   - type: pserv
+#     name: node3
+#     env: docker
+#     dockerContext: .
+#     dockerfilePath: ./Dockerfile
+#     envVars:
+#       - key: SHARD_NODE_ID
+#         value: 3
+#       - key: SHARD_LISTEN_ADDR
+#         value: 0.0.0.0:7070
+#       - key: SHARD_PEERS
+#         value: 1:node1:7070,2:node2:7070
+#       - key: SHARD_DATA_DIR
+#         value: /var/shard/data
+#       - key: SHARD_WAL_DIR
+#         value: /var/shard/wal
+
+#   - type: web
+#     name: dashboard
+#     env: docker
+#     dockerContext: ./dashboard
+#     dockerfilePath: ./dashboard/Dockerfile
+#     envVars:
+#       - key: SHARD_IN_DOCKER
+#         value: 1
+
+
+
+
+
 services:
-  - type: pserv
-    name: node1
+  - type: web
+    name: shardkv-cluster
     env: docker
     plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
     envVars:
-      - key: SHARD_NODE_ID
-        value: 1
-      - key: SHARD_LISTEN_ADDR
-        value: 0.0.0.0:7070
-      - key: SHARD_PEERS
-        value: 2:node2:7070,3:node3:7070
-      - key: SHARD_DATA_DIR
-        value: /var/shard/data
-      - key: SHARD_WAL_DIR
-        value: /var/shard/wal
+      - key: PORT
+        value: "8006"
 
-  - type: pserv
-    name: node2
-    env: docker
-    dockerContext: .
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: SHARD_NODE_ID
-        value: 2
-      - key: SHARD_LISTEN_ADDR
-        value: 0.0.0.0:7070
-      - key: SHARD_PEERS
-        value: 1:node1:7070,3:node3:7070
-      - key: SHARD_DATA_DIR
-        value: /var/shard/data
-      - key: SHARD_WAL_DIR
-        value: /var/shard/wal
 
-  - type: pserv
-    name: node3
-    env: docker
-    dockerContext: .
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: SHARD_NODE_ID
-        value: 3
-      - key: SHARD_LISTEN_ADDR
-        value: 0.0.0.0:7070
-      - key: SHARD_PEERS
-        value: 1:node1:7070,2:node2:7070
-      - key: SHARD_DATA_DIR
-        value: /var/shard/data
-      - key: SHARD_WAL_DIR
-        value: /var/shard/wal
 
-  - type: web
-    name: dashboard
-    env: docker
-    dockerContext: ./dashboard
-    dockerfilePath: ./dashboard/Dockerfile
-    envVars:
-      - key: SHARD_IN_DOCKER
-        value: 1
+

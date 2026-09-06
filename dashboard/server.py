@@ -29,7 +29,7 @@ NODES = {
     "node3": {"address": "127.0.0.1:7073", "id": 3},
 }
 
-if os.environ.get("SHARD_IN_DOCKER") == "1":
+if os.environ.get("SHARD_IN_DOCKER") == "1" and os.environ.get("FORCE_LOCAL_NODES") != "1":
     NODES = {
         "node1": {"address": "node1:7070", "id": 1},
         "node2": {"address": "node2:7070", "id": 2},

@@ -568,6 +568,11 @@
                     if (info.status === 'offline') {
                         nodeEl.classList.add('offline');
                         nodeEl.querySelector('.role').textContent = 'Offline';
+                        if (info.error) {
+                            nodeEl.querySelector('.status').textContent = info.error.substring(0, 20);
+                        } else {
+                            nodeEl.querySelector('.status').textContent = 'Unreachable';
+                        }
                     } else {
                         const role = info.role || 'Healthy';
                         nodeEl.classList.add(role.toLowerCase());

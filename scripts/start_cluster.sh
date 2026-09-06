@@ -138,6 +138,7 @@ NODE3_PID=$!
 echo "Cluster nodes started. Launching Dashboard on port ${PORT:-8006}..."
 
 # Check if dashboard is a Python app or Node/compiled binary and run it
+export FORCE_LOCAL_NODES=1
 if [ -f "/app/dashboard/server.py" ] || [ -f "./dashboard/server.py" ]; then
     PORT=${PORT:-8006} python3 dashboard/server.py &
     DASH_PID=$!

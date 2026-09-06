@@ -29,6 +29,13 @@ NODES = {
     "node3": {"address": "127.0.0.1:7073", "id": 3},
 }
 
+if os.environ.get("SHARD_IN_DOCKER") == "1":
+    NODES = {
+        "node1": {"address": "node1:7070", "id": 1},
+        "node2": {"address": "node2:7070", "id": 2},
+        "node3": {"address": "node3:7070", "id": 3},
+    }
+
 activity_log = []
 MAX_LOG_ENTRIES = 100
 _start_lock = threading.Lock()

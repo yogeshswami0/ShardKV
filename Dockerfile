@@ -20,20 +20,35 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_BENCHMAR
 # Runtime stage
 FROM ubuntu:22.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd -m -s /bin/bash shard && \
     mkdir -p /var/shard/data /var/shard/wal && \
     chown -R shard:shard /var/shard
 
-COPY --from=builder /app/build/shard-kv /usr/local/bin/
+WORKDIR /app
 
-USER shard
+# Copy the built binary
+COPY --from=builder /app/build/shard-kv /app/build/shard-kv
+RUN ln -s /app/build/shard-kv /usr/local/bin/shard-kv
 
-ENV SHARD_NODE_ID=1
-ENV SHARD_LISTEN_ADDR=0.0.0.0:7070
-ENV SHARD_DATA_DIR=/var/shard/data
-ENV SHARD_WAL_DIR=/var/shard/wal
-ENV SHARD_LOG_LEVEL=INFO
+# Copy Python dashboard
+COPY dashboard/ dashboard/
+RUN pip3 install --no-cache-dir -r dashboard/requirements.txt
 
-EXPOSE 7070
+# Copy startup script
+COPY scripts/start_cluster.sh /app/start_cluster.sh
+RUN chmod +x /app/start_cluster.sh
 
-ENTRYPOINT ["shard-kv"]
+# The dashboard expects SHARD_IN_DOCKER to point to Docker DNS if using compose, 
+# but since we are running everything in ONE container via start_cluster.sh, 
+# the nodes will literally be on 127.0.0.1 just like local dev!
+# We do NOT set SHARD_IN_DOCKER=1 so the dashboard connects to 127.0.0.1.
+
+EXPOSE 8006
+
+CMD ["/app/start_cluster.sh"]

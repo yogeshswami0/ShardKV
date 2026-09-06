@@ -138,11 +138,8 @@ NODE3_PID=$!
 echo "Cluster nodes started. Launching Dashboard on port ${PORT:-8006}..."
 
 # Check if dashboard is a Python app or Node/compiled binary and run it
-if [ -f "/app/dashboard/app.py" ] || [ -f "./dashboard/app.py" ]; then
-    PORT=${PORT:-8006} python3 dashboard/app.py &
-    DASH_PID=$!
-elif [ -f "/app/dashboard/package.json" ] || [ -f "./dashboard/package.json" ]; then
-    PORT=${PORT:-8006} npm --prefix ./dashboard start &
+if [ -f "/app/dashboard/server.py" ] || [ -f "./dashboard/server.py" ]; then
+    PORT=${PORT:-8006} python3 dashboard/server.py &
     DASH_PID=$!
 else
     # Fallback to direct binary/executable in dashboard folder
